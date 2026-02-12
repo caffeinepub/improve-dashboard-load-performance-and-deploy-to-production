@@ -1,11 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Ensure the CRM Dashboard reliably loads after a hard refresh for authenticated users, and present a clear recoverable error state when initialization fails.
+**Goal:** Speed up Admin/Agent dashboard rendering immediately after Internet Identity login by reducing unnecessary refetching and removing blocking access-control initialization when not needed.
 
 **Planned changes:**
-- Fix the frontend initialization/loading flow so a hard refresh on the app route (`/`) reaches and renders the Dashboard for an already authenticated Internet Identity user.
-- Add a non-blocking error state for dashboard/profile initialization failures (e.g., actor init or profile query) that avoids blank/infinite loading and provides a Retry action.
-- Rephrase the user-facing error/alert text for dashboard/profile load failures into clear, professional English with an explicit next step (retry).
+- Update `frontend/src/hooks/useActor.ts` to stop triggering a broad React Query `refetchQueries` on actor creation; instead, only invalidate/refetch a minimal, explicitly-defined set of dependent queries.
+- Skip (or make non-blocking) `_initializeAccessControlWithSecret` when `caffeineAdminToken` is missing/empty, and ensure errors in access-control initialization do not block normal dashboard access.
+- Ensure the dashboard shell renders promptly after authentication, keeping existing skeleton loading patterns for sections/metrics and minimizing full-screen loading states (while preserving existing profile-setup and `DashboardLoadErrorState` behaviors).
 
-**User-visible outcome:** After refreshing the CRM app, authenticated users see the Dashboard load normally; if something goes wrong during startup, they see a clear error message with a Retry option instead of a blank screen or endless spinner.
+**User-visible outcome:** After logging in, users reach the CRM dashboard quickly and see the dashboard layout immediately, with content loading progressively via skeletons instead of a long blank/loading delay.

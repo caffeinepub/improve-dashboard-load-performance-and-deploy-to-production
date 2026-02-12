@@ -1,34 +1,45 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-12T09:30:12.485Z",
+  "generatedAt": "2026-02-12T15:31:28.626Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 2,
+    "total": 3,
     "implemented": 2,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Fix the issue where the CRM Dashboard does not load on a fresh page load (hard refresh) for an authenticated user. The app must reliably reach the Dashboard after refresh, or show a clear recoverable error state (with retry) instead of getting stuck or rendering blank.",
-        "status": "implemented",
+        "summary": "Reduce dashboard bootstrap latency by preventing `useActor()` from force-refetching all React Query queries immediately after the actor becomes available; instead, only invalidate dependent queries (or refetch a minimal, explicitly-defined set) so the dashboard can render quickly after login.",
+        "status": "missing",
         "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/CRMApp.tsx"
+          "frontend/src/hooks/useActor.ts",
+          "frontend/src/hooks/useQueries.ts"
         ],
-        "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/CRMApp.tsx"
-        ]
+        "matchedFiles": []
       },
       {
         "id": "REQ-2",
-        "summary": "Rephrase the user-facing text related to the dashboard-load failure to be clear, professional English. Update the relevant error/alert copy shown when the profile/dashboard cannot be loaded so it communicates the problem and next step (retry) succinctly.",
+        "summary": "Prevent `useActor()` from blocking initial dashboard load on access-control initialization when no admin token is present by skipping the `_initializeAccessControlWithSecret` call if the `caffeineAdminToken` secret parameter is missing/empty, and ensure failures in that initialization do not prevent normal users from reaching their dashboards.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/CRMApp.tsx"
+          "frontend/src/hooks/useActor.ts",
+          "frontend/src/utils/urlParams.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/utils/urlParams.ts"
+        ]
+      },
+      {
+        "id": "REQ-3",
+        "summary": "Improve dashboard bootstrap resilience and perceived performance by ensuring the UI can show the dashboard shell quickly while essential data loads, using existing loading/skeleton patterns (e.g., keep `DashboardOverview` skeletons) and avoiding full-screen loading states longer than necessary once authentication is complete.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/CRMApp.tsx",
+          "frontend/src/pages/Dashboard.tsx",
+          "frontend/src/components/DashboardOverview.tsx"
         ],
         "matchedFiles": [
           "frontend/src/pages/CRMApp.tsx"
@@ -38,12 +49,11 @@
   },
   "changedFiles": [
     "build-request.json",
-    "caffeine.lock.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/hooks/useQueries.ts",
     "frontend/src/pages/CRMApp.tsx",
+    "frontend/src/utils/urlParams.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

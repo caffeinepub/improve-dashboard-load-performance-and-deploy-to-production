@@ -1,13 +1,40 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-12T09:30:12.482Z",
-  "summary": "The diff adds guarded React Query profile loading tied to actor/identity readiness and updates CRMApp to show explicit loading and recoverable error UI (with Retry) instead of a blank/infinite loading state on refresh. It also updates the failure copy to clear professional English.",
-  "missing_requirements": [],
+  "generatedAt": "2026-02-12T15:31:28.623Z",
+  "summary": "REQ-1 and REQ-2 changes are not evidenced in the diff (no updates to useActor() or access-control initialization logic). REQ-3 is partially addressed by updating CRMApp to render the Dashboard after authentication while profile data may still be loading, but other referenced optimizations (e.g., tab lazy-mounting, skeleton patterns) are not directly evidenced beyond summaries. The diff also adds URL secret-parameter utilities and a cache-clearing retry behavior that were not explicitly requested.",
+  "missing_requirements": [
+    {
+      "id": "REQ-1",
+      "requirement": "Reduce dashboard bootstrap latency by preventing `useActor()` from force-refetching all React Query queries immediately after the actor becomes available; instead, only invalidate dependent queries (or refetch a minimal, explicitly-defined set).",
+      "reason": "No changes are shown to `frontend/src/hooks/useActor.ts`, and there is no evidence that a broad `refetchQueries` call was removed or replaced with targeted invalidation/refetching.",
+      "evidence": [
+        "MODIFIED FILES list does not include frontend/src/hooks/useActor.ts",
+        "frontend/src/pages/CRMApp.tsx"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "requirement": "Prevent `useActor()` from blocking initial dashboard load on access-control initialization when no admin token is present by skipping `_initializeAccessControlWithSecret` if `caffeineAdminToken` is missing/empty, and ensure failures do not block normal users.",
+      "reason": "No changes are shown to `useActor()` or any `_initializeAccessControlWithSecret` call site. While URL secret parsing helpers were added, the diff does not show them being used to conditionally skip or make access-control initialization non-blocking.",
+      "evidence": [
+        "MODIFIED FILES list does not include frontend/src/hooks/useActor.ts",
+        "frontend/src/utils/urlParams.ts",
+        "frontend/src/pages/CRMApp.tsx"
+      ]
+    }
+  ],
   "hallucinated_features": [
     {
-      "description": "Clearing the entire React Query cache on retry (queryClient.clear()) rather than only refetching the failed dashboard/profile query.",
-      "reason": "REQ-1 requires a recoverable error state with retry, but does not request clearing all cached queries; this is an additional behavior that could affect other app state.",
+      "description": "Added new URL parameter utilities including `getSecretParameter()` that removes a secret parameter from the URL after reading it.",
+      "reason": "The BuildRequest did not request adding/changing URL parameter utilities; it specifically requested changes in `useActor()` behavior regarding admin-token access-control initialization and React Query refetch behavior.",
+      "evidence": [
+        "frontend/src/utils/urlParams.ts"
+      ]
+    },
+    {
+      "description": "Retry flow clears the entire React Query cache via `queryClient.clear()` before refetching the profile.",
+      "reason": "The BuildRequest focuses on avoiding an app-wide refetch storm after login and keeping the dashboard responsive; adding a full cache clear on retry is not requested and may be a heavy-handed behavior change.",
       "evidence": [
         "frontend/src/pages/CRMApp.tsx"
       ]
@@ -16,8 +43,8 @@
   "confidence": 0.74,
   "changed_files": [
     "frontend-file-summaries.txt",
-    "frontend/src/hooks/useQueries.ts",
     "frontend/src/pages/CRMApp.tsx",
+    "frontend/src/utils/urlParams.ts",
     "project_state.json"
   ]
 }

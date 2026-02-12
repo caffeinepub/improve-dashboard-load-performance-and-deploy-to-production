@@ -1,41 +1,73 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix CRM Dashboard blank/stuck state after hard refresh for authenticated users",
+  "title": "Reduce post-login dashboard latency by limiting actor-triggered refetching and unblocking dashboard shell rendering",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Ensure the CRM app reliably boots into the Dashboard after a hard refresh for authenticated users, with a non-blocking error + retry state if initialization fails.",
+      "summary": "Stop app-wide React Query refetch storm on actor creation; only invalidate/refetch a minimal intentional set so dashboards render quickly after login.",
       "acceptanceCriteria": [
-        "Given a user is already authenticated via Internet Identity, hard-refreshing the page on the CRM app route ('/') results in the Dashboard rendering successfully.",
-        "If an error occurs during initialization (e.g., actor initialization or profile query), the UI shows an error state with a Retry action and does not remain in an infinite loading state or a blank screen.",
-        "The fix does not require manual navigation (e.g., switching tabs) to trigger the Dashboard to appear."
+        "After successful Internet Identity login, the app navigates to the CRM dashboard without a long blank/loading delay caused by an app-wide query refetch storm.",
+        "`frontend/src/hooks/useActor.ts` no longer calls a broad `refetchQueries` for all non-actor queries on actor creation; any refetching is limited and intentional.",
+        "Existing data freshness behavior is preserved via React Query invalidation, and core dashboard data still loads correctly when the relevant components mount."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useQueries.ts",
+          "path": "frontend/src/hooks/useActor.ts",
           "operation": "modify",
-          "description": "Harden the dashboard bootstrap/profile-loading flow by preventing the current-user profile query from running with an anonymous actor during refresh. Use the authenticated principal (from Internet Identity) to gate the query (enabled) and to scope the queryKey so cached/anonymous results cannot incorrectly drive CRMApp into profile-setup/login states. Ensure the hook's derived isLoading/isFetched reflect actor + identity readiness (per the authorization component guidance). Verify the component's usage instructions before implementing."
+          "description": "Replace the current actor-change effect that invalidates+refetches *all* non-actor queries with a minimal, explicitly-defined invalidation strategy (e.g., invalidate/remove only identity-scoped/auth-gated keys like current user profile/role/admin status/approval status) and avoid calling a broad `refetchQueries` on actor availability. Ensure query keys that are not principal-scoped do not get refetched en masse on login. Verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/pages/CRMApp.tsx",
+          "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Update CRMApp rendering decisions to align with the hardened profile hook: (1) avoid showing LoginPage or profile-setup decisions until the authenticated profile query has meaningfully fetched for the current identity, (2) ensure any initialization/profile failure renders a clear recoverable error state with a Retry action that triggers an appropriate refetch (and, if needed, clears/retries relevant React Query caches) instead of leaving the UI blank or stuck. Verify the component's usage instructions before implementing."
+          "description": "Ensure key queries used during dashboard bootstrap are either principal-scoped (include authenticated principal in queryKey where appropriate) or otherwise safe from stale cross-identity cache reuse, so removing the app-wide refetch does not cause incorrect data to persist across login/logout. Verify the component's usage instructions before implementing."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Improve and professionalize the user-facing dashboard/profile load failure messaging and make the retry next-step explicit.",
+      "summary": "Skip or make non-blocking access-control initialization when no admin token is provided so actor creation does not delay dashboards for non-admin users.",
       "acceptanceCriteria": [
-        "The error state shown on dashboard/profile load failure uses clear English phrasing (no awkward grammar) and includes an explicit next step (e.g., retry).",
-        "All user-facing text introduced/edited by this change is in English."
+        "When `caffeineAdminToken` is not provided, `_initializeAccessControlWithSecret` is not called (or is handled in a non-blocking way) and the actor is still created successfully.",
+        "A missing/invalid token does not delay or block dashboard rendering for non-admin users.",
+        "Admin functionality still works when a valid `caffeineAdminToken` is present."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useActor.ts",
+          "operation": "modify",
+          "description": "Update actor creation to (1) read `caffeineAdminToken`, (2) skip `_initializeAccessControlWithSecret` when missing/empty, and (3) ensure failures (invalid token / initialization errors) are caught and do not prevent returning an authenticated actor for normal dashboard use. When a valid token is present, still perform initialization so admin features work. This aligns with the selected \"authorization\" component’s frontend guidance that first-admin initialization is handled from `useActor.ts`. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/utils/urlParams.ts",
+          "operation": "modify",
+          "description": "If needed, harden secret parameter retrieval so an absent/empty `caffeineAdminToken` is treated consistently (empty string/undefined) without triggering downstream initialization work. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Render the dashboard shell promptly after authentication and rely on existing skeletons for section data, avoiding extended full-screen loading after auth completes.",
+      "acceptanceCriteria": [
+        "After authentication completes, the user sees a responsive dashboard shell (header/tabs/layout) promptly, while metrics/sections load with skeletons rather than blocking the entire screen.",
+        "No regression: if user profile is missing, the profile setup flow still appears as before.",
+        "The existing timeout/error state (`DashboardLoadErrorState`) still triggers appropriately when there is a genuine load failure."
       ],
       "file_operations": [
         {
           "path": "frontend/src/pages/CRMApp.tsx",
           "operation": "modify",
-          "description": "Rephrase the dashboard/profile initialization failure copy in the error Alert (title + description + retry affordance) to clear, professional English that explains the problem succinctly and explicitly instructs the user to retry (and what retry will do). Verify the component's usage instructions before implementing."
+          "description": "Adjust post-auth rendering so the app shows the CRM dashboard shell promptly once authentication is complete, instead of a prolonged full-screen loader while profile fetch is pending. Keep the existing profile-missing flow (redirect to profile setup/login page) and preserve the existing timeout/error handling that surfaces `DashboardLoadErrorState` when the profile genuinely fails/times out. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/pages/Dashboard.tsx",
+          "operation": "modify",
+          "description": "If needed to support fast shell rendering, ensure the dashboard layout (Header + Tabs) remains lightweight and that heavy tab content stays lazy (only mounts after visit) so the initial shell is responsive; rely on existing skeleton patterns (e.g., `DashboardOverview`) for essential data while it loads. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/DashboardOverview.tsx",
+          "operation": "modify",
+          "description": "Confirm/adjust that overview uses skeletons during initial data loading and does not contribute to a full-screen block once authenticated, so perceived performance improves while metrics load. Verify the component's usage instructions before implementing."
         }
       ]
     }

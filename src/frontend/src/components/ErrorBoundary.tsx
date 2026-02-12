@@ -61,9 +61,10 @@ class ErrorBoundary extends Component<Props, State> {
                 <AlertTriangle className="h-8 w-8 text-destructive" />
               </div>
               <div>
-                <CardTitle className="text-2xl font-bold">Something went wrong</CardTitle>
+                <CardTitle className="text-2xl font-bold">Something Went Wrong</CardTitle>
                 <CardDescription className="mt-2">
-                  We encountered an unexpected error. Please try reloading the page.
+                  We encountered an unexpected error while rendering the application. Please try
+                  reloading the page or resetting the view.
                 </CardDescription>
               </div>
             </CardHeader>
@@ -85,6 +86,9 @@ class ErrorBoundary extends Component<Props, State> {
                   Try Again
                 </Button>
               </div>
+              <p className="text-xs text-center text-muted-foreground">
+                If this problem persists, please contact support for assistance.
+              </p>
             </CardContent>
           </Card>
         </div>

@@ -2,34 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-fix-the-issue-where-the-crm-dashboard-does-not-load-on-a-fresh-page-load-hard-refresh-for-an-authenticated-user-the-app-must-reliably-reach-the-dashboard-after-refresh-or-show-a-clear-recoverable-error-state-with-retry-instead-of-getting-stuck-or-rendering-blank",
-      "featureTitle": "Fix the issue where the CRM Dashboard does not load on a fresh page load (hard refresh) for an authenticated user. The app must reliably reach the Dashboard after refresh, or show a clear recoverable error state (with retry) instead of getting stuck or rendering blank.",
+      "featureId": "feature-prevent-useactor-from-blocking-initial-dashboard-load-on-access-control-initialization-when-no-admin-token-is-present-by-skipping-the-initializeaccesscontrolwithsecret-call-if-the-caffeineadmintoken-secret-parameter-is-missing-empty-and-ensure-failures-in-that-initialization-do-not-prevent-normal-users-from-reaching-their-dashboards",
+      "featureTitle": "Prevent `useActor()` from blocking initial dashboard load on access-control initialization when no admin token is present by skipping the `_initializeAccessControlWithSecret` call if the `caffeineAdminToken` secret parameter is missing/empty, and ensure failures in that initialization do not prevent normal users from reaching their dashboards.",
       "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/CRMApp.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "user-approval@3.0.0",
-        "camera@1.0.0",
-        "blob-storage@4.0.0",
-        "http-outcalls@3.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-1"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-rephrase-the-user-facing-text-related-to-the-dashboard-load-failure-to-be-clear-professional-english-update-the-relevant-error-alert-copy-shown-when-the-profile-dashboard-cannot-be-loaded-so-it-communicates-the-problem-and-next-step-retry-succinctly",
-      "featureTitle": "Rephrase the user-facing text related to the dashboard-load failure to be clear, professional English. Update the relevant error/alert copy shown when the profile/dashboard cannot be loaded so it communicates the problem and next step (retry) succinctly.",
-      "files": [
-        "frontend/src/pages/CRMApp.tsx"
+        "frontend/src/utils/urlParams.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -45,6 +21,29 @@
       ],
       "testIds": [
         "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-improve-dashboard-bootstrap-resilience-and-perceived-performance-by-ensuring-the-ui-can-show-the-dashboard-shell-quickly-while-essential-data-loads-using-existing-loading-skeleton-patterns-e-g-keep-dashboardoverview-skeletons-and-avoiding-full-screen-loading-states-longer-than-necessary-once-authentication-is-complete",
+      "featureTitle": "Improve dashboard bootstrap resilience and perceived performance by ensuring the UI can show the dashboard shell quickly while essential data loads, using existing loading/skeleton patterns (e.g., keep `DashboardOverview` skeletons) and avoiding full-screen loading states longer than necessary once authentication is complete.",
+      "files": [
+        "frontend/src/pages/CRMApp.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "user-approval@3.0.0",
+        "camera@1.0.0",
+        "blob-storage@4.0.0",
+        "http-outcalls@3.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
       ],
       "confidence": "high"
     }

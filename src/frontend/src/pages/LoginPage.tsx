@@ -75,7 +75,7 @@ export default function LoginPage() {
             <div>
               <CardTitle className="text-2xl font-bold">Complete Your Profile</CardTitle>
               <CardDescription className="mt-2">
-                Please provide your details to continue
+                Please provide your details to continue to the dashboard
               </CardDescription>
             </div>
           </CardHeader>
@@ -137,7 +137,7 @@ export default function LoginPage() {
                 {saveProfile.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Saving...
+                    Saving Profile...
                   </>
                 ) : (
                   'Continue to Dashboard'
@@ -157,7 +157,10 @@ export default function LoginPage() {
         <Card className="w-full max-w-md shadow-xl">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="mt-4 text-lg text-muted-foreground">Loading...</p>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Checking your profile...
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">Please wait</p>
           </CardContent>
         </Card>
       </div>
@@ -190,7 +193,7 @@ export default function LoginPage() {
               {isLoggingIn ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Connecting...
+                  Connecting to Internet Identity...
                 </>
               ) : (
                 'Sign In'
