@@ -1,0 +1,76 @@
+{
+  "kind": "build_request",
+  "title": "Improve Dashboard load performance and deploy to production",
+  "priority": "normal",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "text": "Reduce initial Dashboard load time by preventing data fetching for non-active tabs until the user selects those tabs.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-6",
+          "msg-7"
+        ],
+        "quotes": [
+          "Taking too time in page loading.  Please rephrase the server, and Dashboard should be open quick",
+          "Can you resolve?"
+        ]
+      },
+      "acceptanceCriteria": [
+        "When loading the Dashboard, only the Overview tab triggers network calls; other tab sections do not fetch data until their tab is opened.",
+        "Switching to a tab triggers that tab’s data fetching and renders its content normally.",
+        "No runtime errors occur when switching tabs repeatedly."
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "text": "Optimize the Overview tab data loading by replacing multiple large list queries with a single backend query that returns only the aggregated metrics and limited recent items needed for the Overview UI.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-6"
+        ],
+        "quotes": [
+          "Taking too time in page loading.  Please rephrase the server, and Dashboard should be open quick"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Backend exposes a dedicated query method for Dashboard Overview that returns the exact metric counts and a small, bounded set of recent items required by the Overview UI (no full customers/leads lists).",
+        "Dashboard Overview uses the new single query and no longer calls the full-list endpoints just to compute counts.",
+        "Overview renders successfully for both admin and agent roles, including correct customer query counts for the caller’s role.",
+        "The Overview tab shows loading skeletons while the new query is in-flight and then displays metrics without noticeable delay compared to the previous implementation."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Deploy the current approved build to production (go live) after performance improvements are implemented and verified.",
+      "target": "unknown",
+      "source": {
+        "messageIds": [
+          "msg-14"
+        ],
+        "quotes": [
+          "Go live"
+        ]
+      },
+      "acceptanceCriteria": [
+        "A production deployment is initiated from the latest code containing the performance improvements.",
+        "The production URL loads and the Dashboard opens successfully after login."
+      ]
+    }
+  ],
+  "constraints": [
+    "Do not edit files under frontend/src/components/ui (read-only).",
+    "Do not edit frontend/src/hooks/useInternetIdentity.ts or frontend/src/hooks/useActor.ts (immutable paths).",
+    "Keep all Motoko logic in the single backend actor (backend/main.mo)."
+  ],
+  "nonGoals": [
+    "Adding new CRM modules or changing business workflows beyond performance and deployment.",
+    "Introducing external databases, third-party auth providers, or non-Motoko backend services."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}

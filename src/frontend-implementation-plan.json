@@ -1,0 +1,60 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Dashboard performance improvements (lazy tab fetching + optimized Overview query) and production go-live checklist",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "summary": "Lazy-mount Dashboard tab contents so only the active tab triggers data fetching.",
+      "acceptanceCriteria": [
+        "When loading the Dashboard, only the Overview tab triggers network calls; other tab sections do not fetch data until their tab is opened.",
+        "Switching to a tab triggers that tab’s data fetching and renders its content normally.",
+        "No runtime errors occur when switching tabs repeatedly."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/Dashboard.tsx",
+          "operation": "modify",
+          "description": "Change tab rendering to mount non-Overview tab contents only after the user selects them (e.g., track a set of visited tabs and conditionally render each TabsContent). This ensures components like LeadsSection/CustomersSection/etc. do not run their React Query hooks until opened, while keeping navigation behavior stable when switching tabs repeatedly."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Update Overview to use a single aggregated metrics query (getOverviewMetrics) instead of full-list queries for counts and recent items.",
+      "acceptanceCriteria": [
+        "Backend exposes a dedicated query method for Dashboard Overview that returns the exact metric counts and a small, bounded set of recent items required by the Overview UI (no full customers/leads lists).",
+        "Dashboard Overview uses the new single query and no longer calls the full-list endpoints just to compute counts.",
+        "Overview renders successfully for both admin and agent roles, including correct customer query counts for the caller’s role.",
+        "The Overview tab shows loading skeletons while the new query is in-flight and then displays metrics without noticeable delay compared to the previous implementation."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add a dedicated React Query hook (e.g., useGetOverviewMetrics) that calls the backend capability actor.getOverviewMetrics() and returns typed OverviewMetrics data with appropriate loading/error handling consistent with existing hooks."
+        },
+        {
+          "path": "frontend/src/components/DashboardOverview.tsx",
+          "operation": "modify",
+          "description": "Refactor Overview to rely on the single useGetOverviewMetrics hook instead of fetching full customers/leads/follow-ups/query lists. Keep skeleton loading states, and render counts + recent items from OverviewMetrics (including role-correct customer query stats provided by the backend capability)."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Provide a production deployment checklist for initiating go-live after verifying performance improvements.",
+      "acceptanceCriteria": [
+        "A production deployment is initiated from the latest code containing the performance improvements.",
+        "The production URL loads and the Dashboard opens successfully after login."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/PRODUCTION_DEPLOYMENT.md",
+          "operation": "create",
+          "description": "Add a concise go-live checklist focused on verifying the performance changes (tab lazy-loading + Overview metrics query), building the frontend, deploying the approved build to production using the project’s existing deployment process, and validating that the production URL loads and the Dashboard opens successfully after login."
+        }
+      ]
+    }
+  ]
+}

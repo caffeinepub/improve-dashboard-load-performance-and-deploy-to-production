@@ -1,2 +1,3 @@
-# improve-dashboard-load-performance-and-deploy-to-production
-Exported from Caffeine project: Improve Dashboard load performance and deploy to production
+## 
+
+To run app build and run docker image: `docker build -t app . docker run -it --network host app`
