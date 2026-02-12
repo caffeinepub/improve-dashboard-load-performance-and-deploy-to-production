@@ -1,68 +1,23 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-07T12:15:04.847Z",
-  "summary": "REQ-1 appears to be implemented via dashboard tab lazy-mounting/visited-tabs tracking, and the Overview UI now uses a single `useGetOverviewMetrics()` hook with loading skeletons. However, the diff summary does not provide evidence that the backend implements the required dedicated aggregated Overview query (REQ-2), nor any evidence of a production deployment (REQ-3). Several unrelated UI/features were modified/added that were not requested, and an immutable hook file was edited.",
-  "missing_requirements": [
-    {
-      "id": "REQ-2",
-      "requirement": "Backend exposes a dedicated query method for Dashboard Overview that returns aggregated metrics + bounded recent items, and Overview no longer relies on full-list endpoints for counts; metrics must be correct for admin vs agent roles (including customer query counts).",
-      "reason": "Frontend calls `actor.getOverviewMetrics()` and renders metrics, but the provided backend diff content is truncated and does not show any new/updated `getOverviewMetrics` query implementation, its return type/shape, bounded recent items, or role-based logic. The diff summary alone cannot confirm the backend changes required by the acceptance criteria.",
-      "evidence": [
-        "backend/main.mo (truncated; no visible getOverviewMetrics implementation)",
-        "frontend/src/hooks/useQueries.ts (calls actor.getOverviewMetrics())",
-        "frontend/src/components/DashboardOverview.tsx (uses useGetOverviewMetrics)"
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "requirement": "Deploy the approved build to production (go live) after performance improvements; production URL loads and Dashboard opens after login.",
-      "reason": "No deployment configuration, pipeline changes, release artifacts, or deployment instructions/evidence are shown in the diff summary; cannot verify a production deployment was initiated or that the production URL works.",
-      "evidence": [
-        "file-diff summary (no deployment-related files/changes shown)"
-      ]
-    }
-  ],
+  "generatedAt": "2026-02-12T09:30:12.482Z",
+  "summary": "The diff adds guarded React Query profile loading tied to actor/identity readiness and updates CRMApp to show explicit loading and recoverable error UI (with Retry) instead of a blank/infinite loading state on refresh. It also updates the failure copy to clear professional English.",
+  "missing_requirements": [],
   "hallucinated_features": [
     {
-      "description": "Edited an immutable path: `frontend/src/hooks/useInternetIdentity.ts` was modified despite the constraint stating it must not be edited.",
-      "reason": "BuildRequest constraints explicitly mark this file as immutable; changes here are not requested by REQ-1/2/3 and violate constraints.",
+      "description": "Clearing the entire React Query cache on retry (queryClient.clear()) rather than only refetching the failed dashboard/profile query.",
+      "reason": "REQ-1 requires a recoverable error state with retry, but does not request clearing all cached queries; this is an additional behavior that could affect other app state.",
       "evidence": [
-        "frontend/src/hooks/useInternetIdentity.ts (modified)"
-      ]
-    },
-    {
-      "description": "Added `project_state.json` with internal tracking items (AR-1..AR-4).",
-      "reason": "Not requested by any requirement; appears to be meta/project-management data rather than performance or deployment work.",
-      "evidence": [
-        "project_state.json (added)"
-      ]
-    },
-    {
-      "description": "Implemented/modified a real-time messaging interface (conversation list, search, auto-scroll, conversation-specific queries).",
-      "reason": "Not part of REQ-1/REQ-2/REQ-3 (Dashboard tab fetch deferral, Overview query optimization, production deploy).",
-      "evidence": [
-        "frontend/src/components/MessagingSection.tsx (modified)"
-      ]
-    },
-    {
-      "description": "Expanded/modified message templates management (copy-to-clipboard, default template selection, dialogs/UI changes).",
-      "reason": "Not requested by REQ-1/REQ-2/REQ-3.",
-      "evidence": [
-        "frontend/src/components/TemplatesSection.tsx (modified)"
+        "frontend/src/pages/CRMApp.tsx"
       ]
     }
   ],
-  "confidence": 0.62,
+  "confidence": 0.74,
   "changed_files": [
-    "backend/main.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/components/DashboardOverview.tsx",
-    "frontend/src/components/MessagingSection.tsx",
-    "frontend/src/components/TemplatesSection.tsx",
-    "frontend/src/hooks/useInternetIdentity.ts",
     "frontend/src/hooks/useQueries.ts",
-    "frontend/src/pages/Dashboard.tsx",
+    "frontend/src/pages/CRMApp.tsx",
     "project_state.json"
   ]
 }

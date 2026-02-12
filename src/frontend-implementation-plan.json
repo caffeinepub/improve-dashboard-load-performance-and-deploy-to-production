@@ -1,58 +1,41 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Dashboard performance improvements (lazy tab fetching + optimized Overview query) and production go-live checklist",
+  "title": "Fix CRM Dashboard blank/stuck state after hard refresh for authenticated users",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Lazy-mount Dashboard tab contents so only the active tab triggers data fetching.",
+      "summary": "Ensure the CRM app reliably boots into the Dashboard after a hard refresh for authenticated users, with a non-blocking error + retry state if initialization fails.",
       "acceptanceCriteria": [
-        "When loading the Dashboard, only the Overview tab triggers network calls; other tab sections do not fetch data until their tab is opened.",
-        "Switching to a tab triggers that tab’s data fetching and renders its content normally.",
-        "No runtime errors occur when switching tabs repeatedly."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/pages/Dashboard.tsx",
-          "operation": "modify",
-          "description": "Change tab rendering to mount non-Overview tab contents only after the user selects them (e.g., track a set of visited tabs and conditionally render each TabsContent). This ensures components like LeadsSection/CustomersSection/etc. do not run their React Query hooks until opened, while keeping navigation behavior stable when switching tabs repeatedly."
-        }
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "summary": "Update Overview to use a single aggregated metrics query (getOverviewMetrics) instead of full-list queries for counts and recent items.",
-      "acceptanceCriteria": [
-        "Backend exposes a dedicated query method for Dashboard Overview that returns the exact metric counts and a small, bounded set of recent items required by the Overview UI (no full customers/leads lists).",
-        "Dashboard Overview uses the new single query and no longer calls the full-list endpoints just to compute counts.",
-        "Overview renders successfully for both admin and agent roles, including correct customer query counts for the caller’s role.",
-        "The Overview tab shows loading skeletons while the new query is in-flight and then displays metrics without noticeable delay compared to the previous implementation."
+        "Given a user is already authenticated via Internet Identity, hard-refreshing the page on the CRM app route ('/') results in the Dashboard rendering successfully.",
+        "If an error occurs during initialization (e.g., actor initialization or profile query), the UI shows an error state with a Retry action and does not remain in an infinite loading state or a blank screen.",
+        "The fix does not require manual navigation (e.g., switching tabs) to trigger the Dashboard to appear."
       ],
       "file_operations": [
         {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Add a dedicated React Query hook (e.g., useGetOverviewMetrics) that calls the backend capability actor.getOverviewMetrics() and returns typed OverviewMetrics data with appropriate loading/error handling consistent with existing hooks."
+          "description": "Harden the dashboard bootstrap/profile-loading flow by preventing the current-user profile query from running with an anonymous actor during refresh. Use the authenticated principal (from Internet Identity) to gate the query (enabled) and to scope the queryKey so cached/anonymous results cannot incorrectly drive CRMApp into profile-setup/login states. Ensure the hook's derived isLoading/isFetched reflect actor + identity readiness (per the authorization component guidance). Verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/components/DashboardOverview.tsx",
+          "path": "frontend/src/pages/CRMApp.tsx",
           "operation": "modify",
-          "description": "Refactor Overview to rely on the single useGetOverviewMetrics hook instead of fetching full customers/leads/follow-ups/query lists. Keep skeleton loading states, and render counts + recent items from OverviewMetrics (including role-correct customer query stats provided by the backend capability)."
+          "description": "Update CRMApp rendering decisions to align with the hardened profile hook: (1) avoid showing LoginPage or profile-setup decisions until the authenticated profile query has meaningfully fetched for the current identity, (2) ensure any initialization/profile failure renders a clear recoverable error state with a Retry action that triggers an appropriate refetch (and, if needed, clears/retries relevant React Query caches) instead of leaving the UI blank or stuck. Verify the component's usage instructions before implementing."
         }
       ]
     },
     {
-      "id": "REQ-3",
-      "summary": "Provide a production deployment checklist for initiating go-live after verifying performance improvements.",
+      "id": "REQ-2",
+      "summary": "Improve and professionalize the user-facing dashboard/profile load failure messaging and make the retry next-step explicit.",
       "acceptanceCriteria": [
-        "A production deployment is initiated from the latest code containing the performance improvements.",
-        "The production URL loads and the Dashboard opens successfully after login."
+        "The error state shown on dashboard/profile load failure uses clear English phrasing (no awkward grammar) and includes an explicit next step (e.g., retry).",
+        "All user-facing text introduced/edited by this change is in English."
       ],
       "file_operations": [
         {
-          "path": "frontend/PRODUCTION_DEPLOYMENT.md",
-          "operation": "create",
-          "description": "Add a concise go-live checklist focused on verifying the performance changes (tab lazy-loading + Overview metrics query), building the frontend, deploying the approved build to production using the project’s existing deployment process, and validating that the production URL loads and the Dashboard opens successfully after login."
+          "path": "frontend/src/pages/CRMApp.tsx",
+          "operation": "modify",
+          "description": "Rephrase the dashboard/profile initialization failure copy in the error Alert (title + description + retry affordance) to clear, professional English that explains the problem succinctly and explicitly instructs the user to retry (and what retry will do). Verify the component's usage instructions before implementing."
         }
       ]
     }

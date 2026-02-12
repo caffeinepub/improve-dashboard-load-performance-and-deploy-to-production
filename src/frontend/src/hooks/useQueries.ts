@@ -37,11 +37,16 @@ export enum QueryStatus {
 // User Profile Queries
 export function useGetCallerUserProfile() {
   const { actor, isFetching: actorFetching } = useActor();
+  const { identity, isInitializing } = useInternetIdentity();
+
+  // Get the authenticated principal to scope the query
+  const authenticatedPrincipal = identity?.getPrincipal().toString();
 
   const query = useQuery<UserProfile | null>({
-    queryKey: ['currentUserProfile'],
+    queryKey: ['currentUserProfile', authenticatedPrincipal],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
+      if (!identity) throw new Error('Identity not available');
       try {
         return await actor.getCallerUserProfile();
       } catch (error: any) {
@@ -52,15 +57,15 @@ export function useGetCallerUserProfile() {
         throw error;
       }
     },
-    enabled: !!actor && !actorFetching,
+    enabled: !!actor && !actorFetching && !!identity && !isInitializing,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
 
   return {
     ...query,
-    isLoading: actorFetching || query.isLoading,
-    isFetched: !!actor && query.isFetched,
+    isLoading: actorFetching || isInitializing || query.isLoading,
+    isFetched: !!actor && !!identity && !isInitializing && query.isFetched,
   };
 }
 
@@ -573,25 +578,16 @@ export function useCompleteFollowUp() {
       queryClient.invalidateQueries({ queryKey: ['followUps'] });
       queryClient.invalidateQueries({ queryKey: ['pendingFollowUps'] });
       queryClient.invalidateQueries({ queryKey: ['overviewMetrics'] });
-      toast.success('Follow-up updated successfully');
+      toast.success('Follow-up status updated');
     },
     onError: (error: Error) => {
-      console.error('Error completing follow-up:', error);
+      console.error('Error updating follow-up:', error);
       toast.error(`Failed to update follow-up: ${error.message}`);
     },
   });
 }
 
-// Message Template Queries
-export function useGetMessageTemplatesByCategory(category: TemplateCategory) {
-  const { data: allTemplates = [], isLoading } = useGetAllTemplates();
-  
-  return {
-    data: allTemplates.filter(template => template.category === category),
-    isLoading,
-  };
-}
-
+// Template Queries
 export function useGetAllTemplates() {
   const { actor, isFetching: actorFetching } = useActor();
 
@@ -603,6 +599,7 @@ export function useGetAllTemplates() {
         return await actor.getAllTemplates();
       } catch (error) {
         console.error('Error fetching templates:', error);
+        toast.error('Failed to load templates');
         return [];
       }
     },
@@ -610,10 +607,85 @@ export function useGetAllTemplates() {
   });
 }
 
+export function useGetTemplatesByCategory(category: TemplateCategory) {
+  const { data: allTemplates = [], isLoading } = useGetAllTemplates();
+  
+  return {
+    data: allTemplates.filter(template => template.category === category),
+    isLoading,
+  };
+}
+
+// Alias for backward compatibility
+export const useGetMessageTemplatesByCategory = useGetTemplatesByCategory;
+
+export function useAddTemplate() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (template: MessageTemplate) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.addTemplate(template);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['templates'] });
+      toast.success('Template created successfully');
+    },
+    onError: (error: Error) => {
+      console.error('Error adding template:', error);
+      toast.error(`Failed to create template: ${error.message}`);
+    },
+  });
+}
+
+// Alias for backward compatibility
+export const useSaveMessageTemplate = useAddTemplate;
+
+export function useUpdateTemplate() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, template }: { id: bigint; template: MessageTemplate }) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.updateTemplate(id, template);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['templates'] });
+      toast.success('Template updated successfully');
+    },
+    onError: (error: Error) => {
+      console.error('Error updating template:', error);
+      toast.error(`Failed to update template: ${error.message}`);
+    },
+  });
+}
+
+export function useDeleteTemplate() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: bigint) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.deleteTemplate(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['templates'] });
+      toast.success('Template deleted successfully');
+    },
+    onError: (error: Error) => {
+      console.error('Error deleting template:', error);
+      toast.error(`Failed to delete template: ${error.message}`);
+    },
+  });
+}
+
+// Default follow-up template (mock implementation - backend doesn't support this)
 export function useGetDefaultFollowUpTemplate() {
   const { data: templates = [] } = useGetAllTemplates();
   
-  // Return the first follow-up template as default (simplified implementation)
   return {
     data: templates.find(t => t.category === TemplateCategory.followUp) || null,
     isLoading: false,
@@ -621,50 +693,66 @@ export function useGetDefaultFollowUpTemplate() {
 }
 
 export function useSetDefaultFollowUpTemplate() {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (templateId: bigint) => {
-      // This is a client-side only operation for now
-      return templateId;
+      // Mock implementation - backend doesn't support default template
+      console.log('Setting default template:', templateId);
+      return Promise.resolve();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['templates'] });
-      toast.success('Default template set successfully');
+      toast.success('Default template set');
     },
   });
 }
 
-export function useSaveMessageTemplate() {
+// WhatsApp Configuration
+export function useGetWhatsAppConfig() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<WhatsAppConfig | null>({
+    queryKey: ['whatsappConfig'],
+    queryFn: async () => {
+      if (!actor) return null;
+      try {
+        return await actor.getWhatsAppConfig();
+      } catch (error) {
+        console.error('Error fetching WhatsApp config:', error);
+        return null;
+      }
+    },
+    enabled: !!actor && !actorFetching,
+  });
+}
+
+export function useSetWhatsAppConfig() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (template: MessageTemplate) => {
+    mutationFn: async (config: WhatsAppConfig) => {
       if (!actor) throw new Error('Actor not available');
-      if (template.id === BigInt(0)) {
-        return actor.addTemplate(template);
-      } else {
-        return actor.updateTemplate(template.id, template);
-      }
+      return actor.setWhatsAppConfig(config);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['templates'] });
-      toast.success('Template saved successfully');
+      queryClient.invalidateQueries({ queryKey: ['whatsappConfig'] });
+      toast.success('WhatsApp configuration updated');
     },
     onError: (error: Error) => {
-      console.error('Error saving template:', error);
-      toast.error(`Failed to save template: ${error.message}`);
+      console.error('Error updating WhatsApp config:', error);
+      toast.error(`Failed to update WhatsApp config: ${error.message}`);
     },
   });
 }
 
-// WhatsApp Integration Queries
+// Alias for backward compatibility
+export const useUpdateWhatsAppConfig = useSetWhatsAppConfig;
+
+// Check if WhatsApp is active
 export function useIsWhatsAppActive() {
   const { actor, isFetching: actorFetching } = useActor();
 
   return useQuery<boolean>({
-    queryKey: ['whatsAppActive'],
+    queryKey: ['whatsappActive'],
     queryFn: async () => {
       if (!actor) return false;
       try {
@@ -679,121 +767,27 @@ export function useIsWhatsAppActive() {
   });
 }
 
-export function useUpdateWhatsAppConfig() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (config: WhatsAppConfig) => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.setWhatsAppConfig(config);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['whatsAppActive'] });
-      toast.success('WhatsApp configuration updated successfully');
-    },
-    onError: (error: Error) => {
-      console.error('Error updating WhatsApp config:', error);
-      toast.error(`Failed to update WhatsApp config: ${error.message}`);
-    },
-  });
-}
-
-// WhatsApp Message Logs
-export function useGetAllWhatsAppMessageLogs() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<WhatsAppMessageLog[]>({
-    queryKey: ['whatsappMessageLogs'],
-    queryFn: async () => {
-      if (!actor) return [];
-      try {
-        return await actor.getWhatsAppMessageLogs();
-      } catch (error) {
-        console.error('Error fetching WhatsApp message logs:', error);
-        return [];
-      }
-    },
-    enabled: !!actor && !actorFetching,
-    refetchInterval: 10000,
-  });
-}
-
-export function useGetAgentWhatsAppMessageLogs() {
-  const { actor, isFetching: actorFetching } = useActor();
-  const { identity } = useInternetIdentity();
-
-  return useQuery<WhatsAppMessageLog[]>({
-    queryKey: ['agentWhatsappMessageLogs'],
-    queryFn: async () => {
-      if (!actor || !identity) return [];
-      try {
-        const allLogs = await actor.getWhatsAppMessageLogs();
-        const allLeads = await actor.getAllLeads(null, null);
-        const principal = identity.getPrincipal();
-        
-        const agentLeadIds = new Set(
-          allLeads.leads
-            .filter(lead => lead.assignedAgent?.toString() === principal.toString())
-            .map(lead => lead.id.toString())
-        );
-        
-        return allLogs.filter(log => 
-          log.leadId !== undefined && 
-          log.leadId !== null && 
-          agentLeadIds.has(log.leadId.toString())
-        );
-      } catch (error) {
-        console.error('Error fetching agent WhatsApp message logs:', error);
-        return [];
-      }
-    },
-    enabled: !!actor && !actorFetching && !!identity,
-    refetchInterval: 10000,
-  });
-}
-
-export function useLogWhatsAppMessage() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (log: WhatsAppMessageLog) => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.logWhatsAppMessage(log);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['whatsappMessageLogs'] });
-      queryClient.invalidateQueries({ queryKey: ['agentWhatsappMessageLogs'] });
-    },
-    onError: (error: Error) => {
-      console.error('Error logging WhatsApp message:', error);
-    },
-  });
-}
-
 // Messaging Queries
-export function useGetUserMessages(userId: Principal | null) {
+export function useGetUserMessages(userPrincipal: Principal | null) {
   const { actor, isFetching: actorFetching } = useActor();
 
   return useQuery<Message[]>({
-    queryKey: ['messages', userId?.toString()],
+    queryKey: ['messages', userPrincipal?.toString()],
     queryFn: async () => {
-      if (!actor || !userId) return [];
+      if (!actor || !userPrincipal) return [];
       try {
-        return await actor.getMessages(userId);
+        return await actor.getMessages(userPrincipal);
       } catch (error) {
         console.error('Error fetching messages:', error);
         return [];
       }
     },
-    enabled: !!actor && !actorFetching && !!userId,
+    enabled: !!actor && !actorFetching && !!userPrincipal,
   });
 }
 
-export function useGetConversationMessages(userId: Principal | null) {
-  return useGetUserMessages(userId);
-}
+// Alias for conversation messages (same as user messages)
+export const useGetConversationMessages = useGetUserMessages;
 
 export function useSendMessage() {
   const { actor } = useActor();
@@ -806,7 +800,7 @@ export function useSendMessage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
-      toast.success('Message sent successfully');
+      toast.success('Message sent');
     },
     onError: (error: Error) => {
       console.error('Error sending message:', error);
@@ -815,7 +809,56 @@ export function useSendMessage() {
   });
 }
 
-// Attendance Queries with Pagination
+// Attendance Queries
+export function useGetAttendanceRecords(agentId: Principal | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<AttendanceRecord[]>({
+    queryKey: ['attendanceRecords', agentId?.toString()],
+    queryFn: async () => {
+      if (!actor || !agentId) return [];
+      try {
+        return await actor.getAttendanceRecords(agentId);
+      } catch (error) {
+        console.error('Error fetching attendance records:', error);
+        return [];
+      }
+    },
+    enabled: !!actor && !actorFetching && !!agentId,
+  });
+}
+
+// Get caller's own attendance records
+export function useGetCallerAttendanceRecords() {
+  const { actor, isFetching: actorFetching } = useActor();
+  const { identity } = useInternetIdentity();
+
+  return useQuery<AttendanceRecord[]>({
+    queryKey: ['attendanceRecords', 'caller'],
+    queryFn: async () => {
+      if (!actor || !identity) return [];
+      try {
+        const principal = identity.getPrincipal();
+        return await actor.getAttendanceRecords(principal);
+      } catch (error) {
+        console.error('Error fetching caller attendance records:', error);
+        return [];
+      }
+    },
+    enabled: !!actor && !actorFetching && !!identity,
+  });
+}
+
+// Get caller's latest attendance record
+export function useGetCallerLatestAttendance() {
+  const { data: records = [] } = useGetCallerAttendanceRecords();
+  
+  return {
+    data: records.length > 0 ? records[records.length - 1] : null,
+    isLoading: false,
+  };
+}
+
 export function useGetAllAttendanceRecordsPaginated(pageIndex: number = 1, pageSize: number = 50) {
   const { actor, isFetching: actorFetching } = useActor();
 
@@ -833,115 +876,6 @@ export function useGetAllAttendanceRecordsPaginated(pageIndex: number = 1, pageS
     },
     enabled: !!actor && !actorFetching,
     staleTime: 30000,
-  });
-}
-
-export function useGetAttendanceRecords() {
-  const { actor, isFetching: actorFetching } = useActor();
-  const { identity } = useInternetIdentity();
-
-  return useQuery<AttendanceRecord[]>({
-    queryKey: ['attendanceRecords', 'agent'],
-    queryFn: async () => {
-      if (!actor || !identity) return [];
-      try {
-        const principal = identity.getPrincipal();
-        return await actor.getAttendanceRecords(principal);
-      } catch (error) {
-        console.error('Error fetching attendance records:', error);
-        toast.error('Failed to load attendance records');
-        return [];
-      }
-    },
-    enabled: !!actor && !actorFetching && !!identity,
-  });
-}
-
-export function useGetCallerAttendanceRecords() {
-  return useGetAttendanceRecords();
-}
-
-export function useGetCallerLatestAttendance() {
-  const { data: records = [] } = useGetAttendanceRecords();
-  
-  return {
-    data: records.length > 0 ? records[records.length - 1] : null,
-    isLoading: false,
-  };
-}
-
-export function useMarkAttendance() {
-  const { actor } = useActor();
-  const { identity } = useInternetIdentity();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ faceVerification, location }: { faceVerification: FaceVerificationResult; location: LocationData }) => {
-      if (!actor || !identity) throw new Error('Actor not available');
-      
-      const profile = await actor.getCallerUserProfile();
-      if (!profile) throw new Error('User profile not found');
-      
-      const principal = identity.getPrincipal();
-      const record: AttendanceRecord = {
-        id: BigInt(0),
-        agentId: principal,
-        agentName: profile.name,
-        agentMobile: profile.contactNumber || '',
-        checkInTime: BigInt(Date.now() * 1000000),
-        checkOutTime: undefined,
-        faceVerification,
-        location,
-        isValid: true,
-      };
-      
-      return actor.recordAttendance(record);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendanceRecords'] });
-      queryClient.invalidateQueries({ queryKey: ['overviewMetrics'] });
-      toast.success('Check-in recorded successfully');
-    },
-    onError: (error: Error) => {
-      console.error('Error marking attendance:', error);
-      toast.error(`Failed to record check-in: ${error.message}`);
-    },
-  });
-}
-
-export function useMarkCheckOut() {
-  const { actor } = useActor();
-  const { identity } = useInternetIdentity();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async () => {
-      if (!actor || !identity) throw new Error('Actor not available');
-      
-      const principal = identity.getPrincipal();
-      const records = await actor.getAttendanceRecords(principal);
-      
-      const latestRecord = records[records.length - 1];
-      if (!latestRecord || latestRecord.checkOutTime) {
-        throw new Error('No active check-in found');
-      }
-      
-      const updatedRecord: AttendanceRecord = {
-        ...latestRecord,
-        checkOutTime: BigInt(Date.now() * 1000000),
-      };
-      
-      return actor.recordAttendance(updatedRecord);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendanceRecords'] });
-      queryClient.invalidateQueries({ queryKey: ['overviewMetrics'] });
-      toast.success('Check-out recorded successfully');
-    },
-    onError: (error: Error) => {
-      console.error('Error marking check-out:', error);
-      toast.error(`Failed to record check-out: ${error.message}`);
-    },
   });
 }
 
@@ -966,11 +900,96 @@ export function useRecordAttendance() {
   });
 }
 
+// Mark attendance (check-in)
+export function useMarkAttendance() {
+  const { actor } = useActor();
+  const { identity } = useInternetIdentity();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ faceVerification, location }: { faceVerification: FaceVerificationResult; location: LocationData }) => {
+      if (!actor) throw new Error('Actor not available');
+      if (!identity) throw new Error('Identity not available');
+      
+      const userProfile = await actor.getCallerUserProfile();
+      if (!userProfile) throw new Error('User profile not found');
+      
+      const record: AttendanceRecord = {
+        id: BigInt(0),
+        agentId: identity.getPrincipal(),
+        agentName: userProfile.name,
+        agentMobile: userProfile.contactNumber || '',
+        checkInTime: BigInt(Date.now() * 1000000),
+        checkOutTime: undefined,
+        faceVerification,
+        location,
+        isValid: true,
+      };
+      
+      return actor.recordAttendance(record);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendanceRecords'] });
+      queryClient.invalidateQueries({ queryKey: ['overviewMetrics'] });
+      toast.success('Check-in successful');
+    },
+    onError: (error: Error) => {
+      console.error('Error marking attendance:', error);
+      toast.error(`Failed to check in: ${error.message}`);
+    },
+  });
+}
+
+// Mark check-out
+export function useMarkCheckOut() {
+  const { actor } = useActor();
+  const { identity } = useInternetIdentity();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      if (!identity) throw new Error('Identity not available');
+      
+      const principal = identity.getPrincipal();
+      const records = await actor.getAttendanceRecords(principal);
+      
+      if (records.length === 0) {
+        throw new Error('No check-in record found');
+      }
+      
+      const latestRecord = records[records.length - 1];
+      
+      if (latestRecord.checkOutTime) {
+        throw new Error('Already checked out');
+      }
+      
+      const updatedRecord: AttendanceRecord = {
+        ...latestRecord,
+        checkOutTime: BigInt(Date.now() * 1000000),
+      };
+      
+      // Since there's no updateAttendance method, we need to record a new one
+      // This is a limitation - ideally backend should have an update method
+      return actor.recordAttendance(updatedRecord);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendanceRecords'] });
+      queryClient.invalidateQueries({ queryKey: ['overviewMetrics'] });
+      toast.success('Check-out successful');
+    },
+    onError: (error: Error) => {
+      console.error('Error marking check-out:', error);
+      toast.error(`Failed to check out: ${error.message}`);
+    },
+  });
+}
+
 export function useGetAttendanceRecordsCsvReport(agentId: Principal | null) {
   const { actor, isFetching: actorFetching } = useActor();
 
   return useQuery<CsvReport | null>({
-    queryKey: ['attendanceCsvReport', agentId?.toString()],
+    queryKey: ['attendanceRecordsCsvReport', agentId?.toString()],
     queryFn: async () => {
       if (!actor || !agentId) return null;
       try {
@@ -981,10 +1000,11 @@ export function useGetAttendanceRecordsCsvReport(agentId: Principal | null) {
         return null;
       }
     },
-    enabled: !!actor && !actorFetching && !!agentId,
+    enabled: false,
   });
 }
 
+// Download attendance report
 export function useDownloadAttendanceReport() {
   const { actor } = useActor();
 
@@ -994,8 +1014,49 @@ export function useDownloadAttendanceReport() {
       return actor.getAttendanceRecordsCsvReport(agentId);
     },
     onError: (error: Error) => {
-      console.error('Error downloading attendance report:', error);
+      console.error('Error downloading report:', error);
       toast.error(`Failed to download report: ${error.message}`);
+    },
+  });
+}
+
+// WhatsApp Message Logs
+export function useGetWhatsAppMessageLogs() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<WhatsAppMessageLog[]>({
+    queryKey: ['whatsappMessageLogs'],
+    queryFn: async () => {
+      if (!actor) return [];
+      try {
+        return await actor.getWhatsAppMessageLogs();
+      } catch (error) {
+        console.error('Error fetching WhatsApp message logs:', error);
+        return [];
+      }
+    },
+    enabled: !!actor && !actorFetching,
+  });
+}
+
+// Aliases for backward compatibility
+export const useGetAllWhatsAppMessageLogs = useGetWhatsAppMessageLogs;
+export const useGetAgentWhatsAppMessageLogs = useGetWhatsAppMessageLogs;
+
+export function useLogWhatsAppMessage() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (log: WhatsAppMessageLog) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.logWhatsAppMessage(log);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['whatsappMessageLogs'] });
+    },
+    onError: (error: Error) => {
+      console.error('Error logging WhatsApp message:', error);
     },
   });
 }

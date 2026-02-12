@@ -4,44 +4,30 @@
   "summary": "New project",
   "architectural_notes": [],
   "known_issues": [
-    "Page loading is taking too long; Dashboard should open faster."
+    "Dashboard does not load on a fresh page load (hard refresh).",
+    "Build/deploy process failing due to internal configuration error (requires Caffeine team)."
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-reduce-initial-dashboard-load-time-by-preventing-data-fetching-for-non-active-tabs-until-the-user-selects-those-tabs",
-      "title": "Reduce initial Dashboard load time by preventing data fetching for non-active tabs until the user selects those tabs.",
+      "id": "feature-fix-the-issue-where-the-crm-dashboard-does-not-load-on-a-fresh-page-load-hard-refresh-for-an-authenticated-user-the-app-must-reliably-reach-the-dashboard-after-refresh-or-show-a-clear-recoverable-error-state-with-retry-instead-of-getting-stuck-or-rendering-blank",
+      "title": "Fix the issue where the CRM Dashboard does not load on a fresh page load (hard refresh) for an authenticated user. The app must reliably reach the Dashboard after refresh, or show a clear recoverable error state (with retry) instead of getting stuck or rendering blank.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-optimize-the-overview-tab-data-loading-by-replacing-multiple-large-list-queries-with-a-single-backend-query-that-returns-only-the-aggregated-metrics-and-limited-recent-items-needed-for-the-overview-ui",
-      "title": "Optimize the Overview tab data loading by replacing multiple large list queries with a single backend query that returns only the aggregated metrics and limited recent items needed for the Overview UI.",
+      "id": "feature-rephrase-the-user-facing-text-related-to-the-dashboard-load-failure-to-be-clear-professional-english-update-the-relevant-error-alert-copy-shown-when-the-profile-dashboard-cannot-be-loaded-so-it-communicates-the-problem-and-next-step-retry-succinctly",
+      "title": "Rephrase the user-facing text related to the dashboard-load failure to be clear, professional English. Update the relevant error/alert copy shown when the profile/dashboard cannot be loaded so it communicates the problem and next step (retry) succinctly.",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     }
   ],
-  "new_feature_requests": [
-    {
-      "id": "AR-1",
-      "summary": "Improve page load performance so the Dashboard opens quickly (investigate server-side performance).",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-4",
-      "summary": "Deploy the current approved build to production (go live) after performance improvements are implemented and verified.",
-      "reqIds": [
-        "REQ-3"
-      ],
-      "status": "pending"
-    }
-  ],
-  "projectName": "Improve Dashboard load performance and deploy to production",
+  "new_feature_requests": [],
+  "projectName": "Fix CRM dashboard failing to load after a full page refresh",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

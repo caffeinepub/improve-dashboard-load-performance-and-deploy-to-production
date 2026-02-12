@@ -2,10 +2,11 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-reduce-initial-dashboard-load-time-by-preventing-data-fetching-for-non-active-tabs-until-the-user-selects-those-tabs",
-      "featureTitle": "Reduce initial Dashboard load time by preventing data fetching for non-active tabs until the user selects those tabs.",
+      "featureId": "feature-fix-the-issue-where-the-crm-dashboard-does-not-load-on-a-fresh-page-load-hard-refresh-for-an-authenticated-user-the-app-must-reliably-reach-the-dashboard-after-refresh-or-show-a-clear-recoverable-error-state-with-retry-instead-of-getting-stuck-or-rendering-blank",
+      "featureTitle": "Fix the issue where the CRM Dashboard does not load on a fresh page load (hard refresh) for an authenticated user. The app must reliably reach the Dashboard after refresh, or show a clear recoverable error state (with retry) instead of getting stuck or rendering blank.",
       "files": [
-        "frontend/src/pages/Dashboard.tsx"
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/CRMApp.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -25,11 +26,10 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-optimize-the-overview-tab-data-loading-by-replacing-multiple-large-list-queries-with-a-single-backend-query-that-returns-only-the-aggregated-metrics-and-limited-recent-items-needed-for-the-overview-ui",
-      "featureTitle": "Optimize the Overview tab data loading by replacing multiple large list queries with a single backend query that returns only the aggregated metrics and limited recent items needed for the Overview UI.",
+      "featureId": "feature-rephrase-the-user-facing-text-related-to-the-dashboard-load-failure-to-be-clear-professional-english-update-the-relevant-error-alert-copy-shown-when-the-profile-dashboard-cannot-be-loaded-so-it-communicates-the-problem-and-next-step-retry-succinctly",
+      "featureTitle": "Rephrase the user-facing text related to the dashboard-load failure to be clear, professional English. Update the relevant error/alert copy shown when the profile/dashboard cannot be loaded so it communicates the problem and next step (retry) succinctly.",
       "files": [
-        "frontend/src/components/DashboardOverview.tsx",
-        "frontend/src/hooks/useQueries.ts"
+        "frontend/src/pages/CRMApp.tsx"
       ],
       "components": [
         "authorization@4.0.0",
